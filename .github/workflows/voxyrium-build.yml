@@ -1,0 +1,51 @@
+name: Build Voxyrium 26.2
+
+on:
+  push:
+    branches:
+      - voxyrium-build-20261003
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Voxyrium mc_26.2 source
+        shell: bash
+        run: |
+          set -euxo pipefail
+          curl -L --fail --retry 3 \
+            https://github.com/vistaero/Voxyrium/archive/refs/heads/mc_26.2.zip \
+            -o voxyrium-source.zip
+          unzip -q voxyrium-source.zip
+          mv Voxyrium-mc_26.2 voxyrium
+
+      - name: Setup Java 25
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 25
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-disabled: true
+
+      - name: Build Voxyrium
+        working-directory: voxyrium
+        run: ./gradlew build
+
+      - name: Collect jars
+        shell: bash
+        working-directory: voxyrium
+        run: |
+          set -euxo pipefail
+          mkdir -p ../voxyrium-artifact
+          find build/libs -maxdepth 1 -type f -name '*.jar' -print -exec cp {} ../voxyrium-artifact/ \;
+          ls -lah ../voxyrium-artifact
+
+      - name: Upload Voxyrium jar
+        uses: actions/upload-artifact@v4
+        with:
+          name: voxyrium-26.2
+          path: voxyrium-artifact/*.jar
+          if-no-files-found: error
